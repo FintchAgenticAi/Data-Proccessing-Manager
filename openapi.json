@@ -1,0 +1,534 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Data Processing Manager API",
+    "description": "Classifies File Manager CSV rows as clean or quarantined and manages quarantine review.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/processing/jobs": {
+      "post": {
+        "tags": [
+          "Data Processing Manager"
+        ],
+        "summary": "Process a File Manager CSV",
+        "operationId": "process_csv_processing_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessingJobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processing/batches/{data_batch_id}/pipeline": {
+      "post": {
+        "tags": [
+          "Data Processing Manager"
+        ],
+        "summary": "Run the external transformation, validation, and deduplication pipeline",
+        "description": "Calls the Agentic Rule Manager before each stage, then calls the Transformation, Validation, and Deduplication services. Configure the service URLs with environment variables.",
+        "operationId": "run_pipeline_processing_batches__data_batch_id__pipeline_post",
+        "parameters": [
+          {
+            "name": "data_batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Data Batch Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processing/batches/{data_batch_id}/quarantine-export": {
+      "get": {
+        "tags": [
+          "Data Processing Manager"
+        ],
+        "summary": "Download quarantine CSV",
+        "operationId": "download_quarantine_export_processing_batches__data_batch_id__quarantine_export_get",
+        "parameters": [
+          {
+            "name": "data_batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Data Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processing/quarantine/{quarantine_id}/review": {
+      "post": {
+        "tags": [
+          "Data Processing Manager"
+        ],
+        "summary": "Confirm or release a quarantined row",
+        "operationId": "review_quarantine_processing_quarantine__quarantine_id__review_post",
+        "parameters": [
+          {
+            "name": "quarantine_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Quarantine Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Review Quarantine Processing Quarantine  Quarantine Id  Review Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processing/batches/{data_batch_id}/reupload": {
+      "post": {
+        "tags": [
+          "Data Processing Manager"
+        ],
+        "summary": "Re-upload reviewed CSV as a new version",
+        "operationId": "reupload_csv_processing_batches__data_batch_id__reupload_post",
+        "parameters": [
+          {
+            "name": "data_batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Data Batch Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_reupload_csv_processing_batches__data_batch_id__reupload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReuploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_reupload_csv_processing_batches__data_batch_id__reupload_post": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "file"
+        ],
+        "title": "Body_reupload_csv_processing_batches__data_batch_id__reupload_post"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PipelineRequest": {
+        "properties": {
+          "rule_selector_path": {
+            "type": "string",
+            "title": "Rule Selector Path",
+            "description": "Agentic rule manager selection endpoint.",
+            "default": "/rules/select"
+          },
+          "transformation_path": {
+            "type": "string",
+            "title": "Transformation Path",
+            "description": "Transformation service endpoint.",
+            "default": "/transform"
+          },
+          "validation_path": {
+            "type": "string",
+            "title": "Validation Path",
+            "description": "Validation service endpoint.",
+            "default": "/validate"
+          },
+          "deduplication_path": {
+            "type": "string",
+            "title": "Deduplication Path",
+            "description": "Deduplication service endpoint.",
+            "default": "/deduplicate"
+          }
+        },
+        "type": "object",
+        "title": "PipelineRequest"
+      },
+      "PipelineResponse": {
+        "properties": {
+          "pipeline_execution_id": {
+            "type": "integer",
+            "title": "Pipeline Execution Id"
+          },
+          "data_batch_id": {
+            "type": "integer",
+            "title": "Data Batch Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "processed_count": {
+            "type": "integer",
+            "title": "Processed Count"
+          },
+          "clean_count": {
+            "type": "integer",
+            "title": "Clean Count"
+          },
+          "quarantine_count": {
+            "type": "integer",
+            "title": "Quarantine Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pipeline_execution_id",
+          "data_batch_id",
+          "status",
+          "processed_count",
+          "clean_count",
+          "quarantine_count"
+        ],
+        "title": "PipelineResponse"
+      },
+      "ProcessingJobRequest": {
+        "properties": {
+          "csv_filename": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Csv Filename",
+            "description": "CSV filename returned by File Manager."
+          },
+          "data_batch_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Batch Id",
+            "description": "Optional existing batch ID. If omitted, Data Processing Manager generates it."
+          },
+          "supplier_name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Supplier Name"
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Country"
+          }
+        },
+        "type": "object",
+        "required": [
+          "csv_filename",
+          "supplier_name",
+          "country"
+        ],
+        "title": "ProcessingJobRequest",
+        "example": {
+          "country": "US",
+          "csv_filename": "2026_batch-a.csv",
+          "supplier_name": "Supplier A"
+        }
+      },
+      "ProcessingJobResponse": {
+        "properties": {
+          "data_batch_id": {
+            "type": "integer",
+            "title": "Data Batch Id"
+          },
+          "csv_filename": {
+            "type": "string",
+            "title": "Csv Filename"
+          },
+          "processed_count": {
+            "type": "integer",
+            "title": "Processed Count"
+          },
+          "processed_attempt": {
+            "type": "integer",
+            "title": "Processed Attempt"
+          },
+          "clean_count": {
+            "type": "integer",
+            "title": "Clean Count"
+          },
+          "quarantine_count": {
+            "type": "integer",
+            "title": "Quarantine Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_batch_id",
+          "csv_filename",
+          "processed_count",
+          "processed_attempt",
+          "clean_count",
+          "quarantine_count"
+        ],
+        "title": "ProcessingJobResponse"
+      },
+      "ReuploadResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "new_filename": {
+            "type": "string",
+            "title": "New Filename"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "data_batch_id": {
+            "type": "integer",
+            "title": "Data Batch Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "new_filename",
+          "version",
+          "data_batch_id"
+        ],
+        "title": "ReuploadResponse"
+      },
+      "ReviewDecision": {
+        "type": "string",
+        "enum": [
+          "keep_quarantined",
+          "release"
+        ],
+        "title": "ReviewDecision"
+      },
+      "ReviewRequest": {
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "ReviewRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
