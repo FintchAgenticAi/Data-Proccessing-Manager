@@ -144,7 +144,7 @@ class ProcessingService:
                 if status == "quarantine":
                     quarantine_count += 1
                     db.execute(
-                        "INSERT INTO quarantine_data(raw_record_id,status,reason) VALUES (?, 'quarantined', ?)",
+                        "INSERT INTO quarantine_data(raw_record_id,status,reason) VALUES (?, 'PENDING_FIX', ?)",
                         (raw_id, "External validation or deduplication service flagged this row."),
                     )
                 else:
@@ -194,6 +194,9 @@ class ProcessingService:
                 ).fetchone()
                 if batch is not None:
                     data_batch_id = int(batch["data_batch_id"])
+            if batch is not None and batch["csv_filename"] is None:
+                db.execute("UPDATE data_batch SET csv_filename=? WHERE data_batch_id=?", (csv_filename, int(batch["data_batch_id"])))
+                batch = {**dict(batch), "csv_filename": csv_filename}
             if batch is not None and batch["csv_filename"] != csv_filename and version is None:
                 batch = db.execute(
                     "SELECT * FROM data_batch WHERE csv_filename=? ORDER BY data_batch_id LIMIT 1",
@@ -228,8 +231,8 @@ class ProcessingService:
                 )
             batch_id = int(batch["data_batch_id"])
             execution = db.execute(
-                "INSERT INTO execution_results(data_batch_id,result_status,processing_status) VALUES (?, 'pending', ?) RETURNING execution_result_id",
-                (batch_id, ProcessingStatus.processing.value),
+                "INSERT INTO execution_results(data_batch_id,result_status,processing_status)                 VALUES (?, 'pending', 'InProgress') RETURNING execution_result_id",
+                                (batch_id,),
             ).fetchone()
             execution_id = int(execution["execution_result_id"])
             clean_count = quarantine_count = count = 0
@@ -247,7 +250,7 @@ class ProcessingService:
                         quarantine_count += 1
                         quarantine_rows.append((raw_id, row, decision.reason or "Rule selector requested quarantine"))
                         quarantine = db.execute(
-                            "INSERT INTO quarantine_data(raw_record_id,status,reason) VALUES (?, 'quarantined', ?) RETURNING quarantine_id",
+                            "INSERT INTO quarantine_data(raw_record_id,status,reason) VALUES (?, 'PENDING_FIX', ?) RETURNING quarantine_id",
                             (raw_id, decision.reason or "Rule selector requested quarantine"),
                         ).fetchone()
                         db.execute(
@@ -260,7 +263,7 @@ class ProcessingService:
             if quarantine_rows:
                 self._export(db, quarantine_rows, batch_id, batch_name, year)
             db.execute(
-                "UPDATE execution_results SET result_status='completed', processing_status='completed', processing_count=?, clean_count=?, quarantine_count=?, completed_at=CURRENT_TIMESTAMP WHERE execution_result_id=?",
+                "UPDATE execution_results SET result_status='completed', processing_status='Completed', processing_count=?, clean_count=?, quarantine_count=?, completed_at=CURRENT_TIMESTAMP WHERE execution_result_id=?",
                 (count, clean_count, quarantine_count, execution_id),
             )
             processed_attempt = db.execute(
@@ -299,5 +302,5 @@ class ProcessingService:
         for raw_id, _, _ in rows:
             quarantine = db.execute("SELECT quarantine_id FROM quarantine_data WHERE raw_record_id=?", (raw_id,)).fetchone()
             error = db.execute("SELECT error_id FROM error_reason WHERE quarantine_id=?", (quarantine["quarantine_id"],)).fetchone()
-            db.execute("INSERT INTO quarantine_export(error_id,file_name,status) VALUES (?,?,'created')", (error["error_id"], export_name))
+            db.execute("INSERT INTO quarantine_export(error_id,file_name,status) VALUES (?,?,'EXPORTED')", (error["error_id"], export_name))
         return f"/processing/batches/{batch_id}/quarantine-export"

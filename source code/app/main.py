@@ -88,46 +88,6 @@ async def process_csv(request: ProcessingJobRequest) -> ProcessingJobResponse:
 
 
 @router.post(
-    "/uploads",
-    response_model=ProcessingJobResponse,
-    status_code=201,
-    summary="Receive a converted CSV from File Manager",
-    description="Stores upload details and CSV rows directly in the Data Processing Manager database.",
-)
-async def receive_upload(
-    file: UploadFile = File(...),
-    supplier_name: str = Form(..., min_length=1),
-    country: str = Form(..., min_length=1),
-    batch_name: str = Form(..., min_length=1),
-    year: int = Form(..., ge=1900, le=2100),
-    file_type: str = Form(..., min_length=1),
-    data_category: str = Form(..., min_length=1),
-    data_batch_id: int | None = Form(default=None, ge=1),
-) -> ProcessingJobResponse:
-    if not file.filename or Path(file.filename).suffix.lower() != ".csv":
-        raise HTTPException(status_code=422, detail="Data Processing Manager accepts CSV files only.")
-    with tempfile.TemporaryDirectory(prefix="file-manager-upload-") as temp_dir:
-        csv_path = Path(temp_dir) / Path(file.filename).name
-        csv_path.write_bytes(await file.read())
-        details = {
-            "filename": Path(file.filename).name,
-            "original_filename": Path(file.filename).name,
-            "batch_name": batch_name,
-            "year": year,
-            "file_type": file_type,
-            "data_category": data_category,
-            "country": country,
-        }
-        return service.process(
-            csv_path,
-            details,
-            supplier_name,
-            country,
-            data_batch_id=data_batch_id,
-        )
-
-
-@router.post(
     "/batches/{data_batch_id}/pipeline",
     response_model=PipelineResponse,
     status_code=201,
@@ -184,7 +144,8 @@ def review_quarantine(quarantine_id: int, request: ReviewRequest) -> dict[str, s
         if row is None:
             raise HTTPException(status_code=404, detail="Quarantine record not found.")
         status = "released" if request.decision.value == "release" else "confirmed"
-        db.execute("UPDATE quarantine_data SET status=?, reason=COALESCE(?, reason) WHERE quarantine_id=?", (status, request.reason, quarantine_id))
+        stored_status = "FIXED" if status == "released" else "PENDING_FIX"
+        db.execute("UPDATE quarantine_data SET status=?, reason=COALESCE(?, reason) WHERE quarantine_id=?", (stored_status, request.reason, quarantine_id))
         if status == "released":
             db.execute("INSERT OR IGNORE INTO clean_data(raw_record_id) VALUES (?)", (row["raw_record_id"],))
     return {"status": status, "quarantine_id": str(quarantine_id)}

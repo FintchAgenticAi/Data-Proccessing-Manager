@@ -5,6 +5,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
+from urllib.parse import unquote
 
 from app.config import DATABASE_PATH, DATABASE_URL
 
@@ -91,7 +92,7 @@ class MySQLConnection:
         )
         if sql.lower().startswith("insert into supplier") and "on duplicate key update" in sql.lower():
             sql = re.sub(
-                r"ON DUPLICATE KEY UPDATE .+$",
+                r"ON DUPLICATE KEY UPDATE .+?(?=\s+RETURNING\s|$)",
                 "ON DUPLICATE KEY UPDATE supplier_id=LAST_INSERT_ID(supplier_id), supplier_name=VALUES(supplier_name)",
                 sql,
                 flags=re.IGNORECASE,
@@ -133,12 +134,36 @@ class _ReturningResult:
         return {self.column: self.value}
 
 
+MYSQL_ADDED_COLUMNS = (
+    ("data_batch", "csv_filename", "VARCHAR(255) NULL"),
+    ("raw_kegal_data", "data_json", "JSON NULL"),
+    ("quarantine_data", "reason", "TEXT NULL"),
+    ("execution_results", "result_status", "VARCHAR(50) NULL"),
+    ("execution_results", "processing_count", "INT NOT NULL DEFAULT 0"),
+    ("execution_results", "clean_count", "INT NOT NULL DEFAULT 0"),
+    ("execution_results", "quarantine_count", "INT NOT NULL DEFAULT 0"),
+)
+
+
+def _migrate_mysql(db: Any) -> None:
+    """Add the columns this service needs to the shared tables; existing columns are never changed."""
+    for table, column, definition in MYSQL_ADDED_COLUMNS:
+        exists = db.execute(
+            "SELECT 1 AS found FROM information_schema.columns "
+            "WHERE table_schema=DATABASE() AND table_name=? AND column_name=?",
+            (table, column),
+        ).fetchone()
+        if exists is None:
+            db.execute(f"ALTER TABLE `{table}` ADD COLUMN `{column}` {definition}")
+
+
 def _mysql_connection() -> MySQLConnection:
     import pymysql
 
     parsed = DATABASE_URL.removeprefix("mysql+pymysql://").removeprefix("mysql://")
-    credentials, host_and_db = parsed.split("@", 1)
+    credentials, host_and_db = parsed.rsplit("@", 1)
     username, password = credentials.split(":", 1)
+    username, password = unquote(username), unquote(password)
     host_port, database = host_and_db.split("/", 1)
     host, _, port = host_port.partition(":")
     connection = pymysql.connect(
@@ -158,7 +183,7 @@ def initialize_database(database_path: Path = DATABASE_PATH) -> None:
     if DATABASE_URL:
         db = _mysql_connection()
         try:
-            db.executescript(MYSQL_SCHEMA)
+            _migrate_mysql(db)
             db.commit()
         finally:
             db.close()
