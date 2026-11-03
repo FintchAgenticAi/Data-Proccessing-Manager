@@ -1,0 +1,26 @@
+
+services:
+  dpm:
+    build: .
+    container_name: data-processing-manager
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: data-processing-db
+      MYSQL_PORT: "3306"
+      FILE_MANAGEMENT_URL: http://host.docker.internal:8001
+      WATCHFILES_FORCE_POLLING: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - data_processing_net
+    volumes:
+      - "./source code:/app/source code"
+
+networks:
+  data_processing_net:
+    name: data_processing_net
+    external: true

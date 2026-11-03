@@ -1,0 +1,14 @@
+.git
+.gitignore
+.venv
+.venv-1
+.env
+.env.*
+!.env.example
+__pycache__
+*.pyc
+.pytest_cache
+source code/data
+*.sqlite3
+src test
+openapi.json
